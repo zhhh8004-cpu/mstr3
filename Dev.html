@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev encryption - DEV</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&family=Share+Tech+Mono&display=swap');
+        :root { --bg-color: #0a0e17; --card-color: #121824; --border-color: #1f2a3f; --text-color: #e0e6ed; --accent-color: #00ffcc; --accent-hover: #00ccaa; --danger-color: #ff4d4d; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow-x: hidden; }
+        #matrixCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.25; pointer-events: none; }
+        .container { background-color: var(--card-color); border: 1px solid var(--border-color); border-radius: 15px; padding: 25px; width: 100%; max-width: 600px; box-shadow: 0 0 20px rgba(0, 255, 204, 0.1); position: relative; z-index: 2; }
+        .header { text-align: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+        .header h1 { color: var(--accent-color); margin: 0; font-size: 28px; text-shadow: 0 0 10px rgba(0, 255, 204, 0.5); }
+        .header p { margin: 5px 0 0; color: #8899a6; font-size: 14px; }
+        .dev-logo { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .dev-logo img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-color); box-shadow: 0 0 15px rgba(0,255,204,0.6); }
+        .dev-name { font-weight: bold; color: var(--accent-color); font-size: 18px; text-shadow: 0 0 8px rgba(0,255,204,0.7); }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #a0b0c0; }
+        input[type="file"] { width: 100%; padding: 10px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); cursor: pointer; }
+        input[type="file"]::file-selector-button { background-color: var(--accent-color); color: #000; border: none; padding: 8px 15px; border-radius: 5px; font-family: 'Cairo', sans-serif; font-weight: bold; cursor: pointer; margin-left: 10px; }
+        select { width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-color); font-family: 'Cairo', sans-serif; font-size: 16px; cursor: pointer; }
+        select:focus, input:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 5px rgba(0, 255, 204, 0.5); }
+        button { width: 100%; padding: 15px; background-color: var(--accent-color); color: #000; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; font-family: 'Cairo', sans-serif; cursor: pointer; transition: all 0.3s ease; margin-top: 10px; }
+        button:hover { background-color: var(--accent-hover); box-shadow: 0 0 15px rgba(0, 255, 204, 0.6); }
+        button:disabled { background-color: #333; color: #666; cursor: not-allowed; box-shadow: none; }
+        .log-area { margin-top: 20px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; min-height: 80px; max-height: 150px; overflow-y: auto; font-family: 'Share Tech Mono', monospace; font-size: 14px; color: #00ffcc; }
+        .log-area p { margin: 5px 0; }
+        .log-area .error { color: var(--danger-color); }
+        .result-box { display: none; margin-top: 20px; }
+        .result-box label { color: var(--accent-color); }
+        textarea { width: 100%; height: 250px; background-color: #000; color: #00ffcc; border: 1px solid var(--accent-color); border-radius: 8px; padding: 10px; font-family: 'Share Tech Mono', monospace; font-size: 12px; resize: vertical; box-sizing: border-box; margin-bottom: 10px; }
+        .copy-btn { background-color: #2a3a4a; color: #fff; margin-top: 5px; font-size: 14px; padding: 10px; }
+        .copy-btn:hover { background-color: #3a4a5a; }
+        .download-btn { background-color: #00cc88; color: #000; margin-top: 5px; font-size: 16px; padding: 12px; }
+        .download-btn:hover { background-color: #00aa66; box-shadow: 0 0 15px rgba(0, 204, 136, 0.6); }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #556677; }
+        .countdown-box { margin-bottom: 20px; background: linear-gradient(135deg, rgba(0,255,204,0.05), rgba(0,255,204,0.02)); border: 1px solid var(--accent-color); border-radius: 10px; padding: 15px; text-align: center; box-shadow: inset 0 0 20px rgba(0,255,204,0.1); }
+        .countdown-title { font-family: 'Share Tech Mono', monospace; color: var(--accent-color); font-size: 13px; letter-spacing: 3px; margin-bottom: 12px; text-shadow: 0 0 8px rgba(0,255,204,0.7); }
+        .countdown-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .countdown-cell { background: #000; border: 1px solid var(--accent-color); border-radius: 8px; padding: 8px 4px; box-shadow: inset 0 0 10px rgba(0,255,204,0.2); }
+        .countdown-num { font-family: 'Share Tech Mono', monospace; font-size: 22px; font-weight: bold; color: var(--accent-color); text-shadow: 0 0 10px var(--accent-color); display: block; line-height: 1.2; }
+        .countdown-label { font-family: 'Cairo', sans-serif; font-size: 11px; color: #8899a6; display: block; margin-top: 3px; }
+        .countdown-box.expired { border-color: var(--danger-color); background: rgba(255,77,77,0.05); }
+        .countdown-box.expired .countdown-title { color: var(--danger-color); text-shadow: 0 0 8px var(--danger-color); }
+        .countdown-box.expired .countdown-num { color: var(--danger-color); text-shadow: 0 0 10px var(--danger-color); }
+        .countdown-box.expired .countdown-cell { border-color: var(--danger-color); }
+        #maintenanceScreen { position: fixed; inset: 0; background: radial-gradient(circle at center, #1a0e0e 0%, #000 100%); z-index: 999999; display: none; justify-content: center; align-items: center; flex-direction: column; padding: 20px; text-align: center; }
+        #maintenanceScreen.show { display: flex; }
+        .maintenance-box { background-color: rgba(24, 18, 18, 0.9); border: 2px solid var(--danger-color); border-radius: 15px; padding: 50px 30px; width: 100%; max-width: 480px; box-shadow: 0 0 50px rgba(255, 77, 77, 0.5); animation: maintenancePulse 2s infinite ease-in-out; }
+        @keyframes maintenancePulse { 0%, 100% { box-shadow: 0 0 50px rgba(255, 77, 77, 0.5); } 50% { box-shadow: 0 0 80px rgba(255, 77, 77, 0.8); } }
+        .maintenance-icon { font-size: 90px; margin-bottom: 20px; display: inline-block; animation: rotateWrench 3s infinite ease-in-out; }
+        @keyframes rotateWrench { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-20deg); } 75% { transform: rotate(20deg); } }
+        .maintenance-box h2 { color: var(--danger-color); font-family: 'Share Tech Mono', monospace; font-size: 28px; letter-spacing: 5px; text-shadow: 0 0 20px var(--danger-color); margin: 0 0 20px; }
+        .maintenance-box p { color: #e0e6ed; font-size: 16px; margin: 8px 0; line-height: 1.6; }
+        #maintenanceSubMessage { color: #8899a6; font-size: 14px; margin-top: 15px; }
+        .maintenance-timer { margin-top: 25px; padding: 12px 20px; background: rgba(255,77,77,0.1); border: 1px solid var(--danger-color); border-radius: 8px; font-family: 'Share Tech Mono', monospace; color: var(--danger-color); font-size: 14px; letter-spacing: 2px; }
+        #expiredOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999; display: none; justify-content: center; align-items: center; flex-direction: column; text-align: center; padding: 20px; }
+        #expiredOverlay.show { display: flex; }
+        #expiredOverlay .icon { font-size: 100px; margin-bottom: 20px; animation: shake 0.8s infinite; }
+        #expiredOverlay h2 { color: var(--danger-color); font-family: 'Share Tech Mono', monospace; font-size: 32px; letter-spacing: 5px; text-shadow: 0 0 20px var(--danger-color); margin: 0 0 15px; }
+        #expiredOverlay p { color: #8899a6; font-family: 'Share Tech Mono', monospace; font-size: 14px; letter-spacing: 2px; }
+        #loginScreen { position: fixed; inset: 0; background: radial-gradient(circle at center, #0a0e17 0%, #000 100%); display: flex; justify-content: center; align-items: center; z-index: 9999; flex-direction: column; padding: 20px; transition: opacity 0.8s ease, visibility 0.8s ease; }
+        #loginScreen.hidden { opacity: 0; visibility: hidden; }
+        .login-box { background-color: rgba(18, 24, 36, 0.85); border: 1px solid var(--accent-color); border-radius: 15px; padding: 40px 30px; width: 100%; max-width: 420px; text-align: center; box-shadow: 0 0 30px rgba(0, 255, 204, 0.4), inset 0 0 30px rgba(0,255,204,0.05); position: relative; animation: pulseGlow 3s infinite ease-in-out; }
+        @keyframes pulseGlow { 0%, 100% { box-shadow: 0 0 30px rgba(0, 255, 204, 0.4), inset 0 0 30px rgba(0,255,204,0.05); } 50% { box-shadow: 0 0 50px rgba(0, 255, 204, 0.7), inset 0 0 40px rgba(0,255,204,0.1); } }
+        .login-box::before { content: ''; position: absolute; inset: -2px; border-radius: 15px; background: linear-gradient(45deg, transparent, var(--accent-color), transparent, var(--accent-color), transparent); z-index: -1; filter: blur(8px); opacity: 0.5; animation: rotateBorder 6s linear infinite; }
+        @keyframes rotateBorder { 0% { filter: blur(8px) hue-rotate(0deg); } 100% { filter: blur(8px) hue-rotate(360deg); } }
+        .terminal-title { font-family: 'Share Tech Mono', monospace; color: var(--accent-color); font-size: 14px; text-align: left; margin-bottom: 20px; letter-spacing: 1px; min-height: 20px; text-shadow: 0 0 8px rgba(0,255,204,0.8); }
+        .terminal-title .cursor-blink { display: inline-block; width: 8px; height: 14px; background: var(--accent-color); vertical-align: middle; margin-right: 3px; animation: blink 1s infinite; box-shadow: 0 0 8px var(--accent-color); }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        .lock-icon { font-size: 60px; color: var(--accent-color); margin-bottom: 15px; text-shadow: 0 0 20px var(--accent-color), 0 0 40px var(--accent-color); animation: lockPulse 2s infinite ease-in-out; }
+        @keyframes lockPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        .login-box h2 { color: var(--accent-color); margin: 0 0 20px 0; font-family: 'Share Tech Mono', monospace; letter-spacing: 3px; text-shadow: 0 0 15px rgba(0,255,204,0.7); font-size: 22px; }
+        .password-wrapper { position: relative; margin-bottom: 20px; }
+        #passwordInput { width: 100%; padding: 15px 45px 15px 15px; background-color: #000; border: 1px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); font-family: 'Share Tech Mono', monospace; font-size: 18px; letter-spacing: 5px; text-align: center; box-shadow: inset 0 0 15px rgba(0,255,204,0.2); }
+        #passwordInput:focus { outline: none; box-shadow: inset 0 0 20px rgba(0,255,204,0.4), 0 0 15px rgba(0,255,204,0.6); }
+        #passwordInput.error-shake { animation: shake 0.5s; border-color: var(--danger-color); color: var(--danger-color); box-shadow: inset 0 0 20px rgba(255,77,77,0.4), 0 0 15px rgba(255,77,77,0.6); }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+        .toggle-eye { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--accent-color); cursor: pointer; font-size: 20px; user-select: none; }
+        .login-btn { background: transparent; border: 2px solid var(--accent-color); color: var(--accent-color); padding: 12px; font-family: 'Share Tech Mono', monospace; font-size: 16px; letter-spacing: 3px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-shadow: 0 0 8px var(--accent-color); width: 100%; }
+        .login-btn:hover { background: var(--accent-color); color: #000; box-shadow: 0 0 25px var(--accent-color); text-shadow: none; }
+        .login-error { color: var(--danger-color); font-family: 'Share Tech Mono', monospace; font-size: 13px; margin-top: 15px; min-height: 20px; text-shadow: 0 0 10px var(--danger-color); }
+        .hint { color: #556677; font-size: 11px; margin-top: 20px; font-family: 'Share Tech Mono', monospace; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+
+<canvas id="matrixCanvas"></canvas>
+
+<div id="loginScreen">
+    <div class="login-box">
+        <div class="terminal-title"><span id="typingText"></span><span class="cursor-blink"></span></div>
+        <div class="lock-icon">🔒</div>
+        <h2>[ WELCOME ]</h2>
+        <div class="password-wrapper">
+            <input type="password" id="passwordInput" placeholder="• • • • • •" autocomplete="off">
+            <span class="toggle-eye" id="toggleEye">👁</span>
+        </div>
+        <button class="login-btn" id="loginBtn">UNLOCK</button>
+        <div class="login-error" id="loginError"></div>
+        <div class="hint">// DEV SYSTEM v2.0 //</div>
+    </div>
+</div>
+
+<div class="container" id="mainApp" style="display:none;">
+    <div class="header">
+        <div class="dev-logo">
+            <img src="https://cdn-icons-png.flaticon.com/512/2886/2886318.png" alt="Hacker Logo">
+            <span class="dev-name">DEV</span>
+        </div>
+        <h1>Dev encryption</h1>
+        <p>أداة تشفير Python و Lua (تعمل على جميع الإصدارات)</p>
+    </div>
+
+    <div class="countdown-box" id="countdownBox">
+        <div class="countdown-title">⏱️ مدة صلاحية الأداة</div>
+        <div class="countdown-grid">
+            <div class="countdown-cell"><span class="countdown-num" id="cdDays">--</span><span class="countdown-label">يوم</span></div>
+            <div class="countdown-cell"><span class="countdown-num" id="cdHours">--</span><span class="countdown-label">ساعة</span></div>
+            <div class="countdown-cell"><span class="countdown-num" id="cdMins">--</span><span class="countdown-label">دقيقة</span></div>
+            <div class="countdown-cell"><span class="countdown-num" id="cdSecs">--</span><span class="countdown-label">ثانية</span></div>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="fileInput">اختر ملف (‎.py‎ أو ‎.lua‎):</label>
+        <input type="file" id="fileInput" accept=".py,.lua,.txt">
+    </div>
+
+    <div class="form-group">
+        <label for="encryptMethod">اختر نوع التشفير:</label>
+        <select id="encryptMethod">
+            <option value="base64">Base64</option>
+            <option value="base32">Base32</option>
+            <option value="zlib_base64">Zlib + Base64</option>
+            <option value="zlib_base32">Zlib + Base32</option>
+            <option value="zlib_base16">Zlib + Base16</option>
+            <option value="marshal_zlib_base64">Marshal + Zlib + Base64</option>
+            <option value="marshal_zlib">Marshal + Zlib</option>
+            <option value="marshal_base64">Marshal + Base64</option>
+            <option value="marshal">Marshal</option>
+            <option value="rsa">RSA</option>
+            <option value="ninja">Ninja</option>
+            <option value="lua_script">Lua Script (Grow a Garden)</option>
+        </select>
+    </div>
+
+    <button id="encryptBtn" disabled>
+        <span id="btnText">بدء التشفير</span>
+    </button>
+
+    <div class="log-area" id="logArea">
+        <p>في انتظار البدء...</p>
+    </div>
+
+    <div class="result-box" id="resultBox">
+        <label>📄 الملف المشفر:</label>
+        <textarea id="resultText" readonly></textarea>
+        <button class="download-btn" id="downloadBtn">💾 حفظ الملف</button>
+        <button class="copy-btn" id="copyBtn">📋 نسخ الكود</button>
+    </div>
+
+    <div class="footer">&copy; 2026 DEV - جميع الحقوق محفوظة</div>
+</div>
+
+<div id="expiredOverlay">
+    <div class="icon">⛔</div>
+    <h2>EXPIRED</h2>
+    <p>انتهت صلاحية هذه الأداة</p>
+    <p style="margin-top:10px;font-size:12px;">يرجى التواصل مع المطور للحصول على نسخة جديدة</p>
+</div>
+
+<div id="maintenanceScreen">
+    <div class="maintenance-box">
+        <div class="maintenance-icon">🔧</div>
+        <h2>MAINTENANCE</h2>
+        <p id="maintenanceMessage">التطبيق تحت الصيانة</p>
+        <p id="maintenanceSubMessage">سنعود قريباً، شكراً لتفهمكم</p>
+        <div class="maintenance-timer" id="maintenanceTimer"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js"></script>
+
+<script>
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    let cols, drops;
+    const chars = 'アカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$+-*/=%"\'#&_(),.;:?!\\|{}<>[]^~';
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        cols = Math.floor(canvas.width / 16);
+        drops = Array(cols).fill(1);
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00ffcc';
+        ctx.font = '15px Share Tech Mono, monospace';
+        for (let i = 0; i < drops.length; i++) {
+            const text = chars.charAt(Math.floor(Math.random() * chars.length));
+            ctx.fillText(text, i * 16, drops[i] * 16);
+            if (drops[i] * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+            drops[i]++;
+        }
+    }
+    setInterval(drawMatrix, 50);
+
+    const typingEl = document.getElementById('typingText');
+    const messages = ['> Welcome to the DEV app ', '> Welcome to the DEV app ', '> Welcome to the DEV app '];
+    let msgIndex = 0, charIndex = 0, isDeleting = false;
+
+    function typeLoop() {
+        const current = messages[msgIndex];
+        if (!isDeleting) {
+            typingEl.textContent = current.substring(0, charIndex + 1);
+            charIndex++;
+            if (charIndex === current.length) { isDeleting = true; setTimeout(typeLoop, 1500); return; }
+        } else {
+            typingEl.textContent = current.substring(0, charIndex - 1);
+            charIndex--;
+            if (charIndex === 0) { isDeleting = false; msgIndex = (msgIndex + 1) % messages.length; }
+        }
+        setTimeout(typeLoop, isDeleting ? 30 : 60);
+    }
+    typeLoop();
+
+    const CORRECT_PASSWORD = 'Dev';
+    const loginScreen = document.getElementById('loginScreen');
+    const mainApp = document.getElementById('mainApp');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    const toggleEye = document.getElementById('toggleEye');
+
+    toggleEye.addEventListener('click', () => {
+        if (passwordInput.type === 'password') { passwordInput.type = 'text'; toggleEye.textContent = '🙈'; }
+        else { passwordInput.type = 'password'; toggleEye.textContent = '👁'; }
+    });
+
+    function attemptLogin() {
+        const val = passwordInput.value;
+        if (val === CORRECT_PASSWORD) {
+            loginError.style.color = '#00ffcc';
+            loginError.textContent = '> ACCESS GRANTED ✔';
+            loginBtn.disabled = true;
+            setTimeout(() => {
+                loginScreen.classList.add('hidden');
+                mainApp.style.display = 'block';
+                initExpiry();
+                initPyodide();
+            }, 700);
+        } else {
+            loginError.style.color = '#ff4d4d';
+            loginError.textContent = '> ACCESS DENIED ✘';
+            passwordInput.classList.add('error-shake');
+            setTimeout(() => passwordInput.classList.remove('error-shake'), 500);
+            passwordInput.value = '';
+        }
+    }
+
+    loginBtn.addEventListener('click', attemptLogin);
+    passwordInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') attemptLogin(); });
+    passwordInput.focus();
+
+    const MAINT_START_HOUR = 15, MAINT_START_MINUTE = 0, MAINT_END_HOUR = 17, MAINT_END_MINUTE = 0;
+    const MAINT_MESSAGE = '🔧 التطبيق تحت الصيانة (' + String(MAINT_START_HOUR).padStart(2,'0') + ':' + String(MAINT_START_MINUTE).padStart(2,'0') + ' - ' + String(MAINT_END_HOUR).padStart(2,'0') + ':' + String(MAINT_END_MINUTE).padStart(2,'0') + ')';
+    const MAINT_SUB_MESSAGE = 'سنعود قريباً، شكراً لتفهمكم';
+
+    function checkMaintenanceTime() {
+        const now = new Date();
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const startMinutes = MAINT_START_HOUR * 60 + MAINT_START_MINUTE;
+        const endMinutes = MAINT_END_HOUR * 60 + MAINT_END_MINUTE;
+        if (startMinutes > endMinutes) return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+        return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    }
+
+    function showMaintenance() {
+        document.getElementById('maintenanceMessage').textContent = MAINT_MESSAGE;
+        document.getElementById('maintenanceSubMessage').textContent = MAINT_SUB_MESSAGE;
+        document.getElementById('maintenanceScreen').classList.add('show');
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'none';
+        const timerEl = document.getElementById('maintenanceTimer');
+        if (window.maintTimer) clearInterval(window.maintTimer);
+        window.maintTimer = setInterval(() => {
+            if (!checkMaintenanceTime()) { clearInterval(window.maintTimer); location.reload(); return; }
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            const endMinutes = MAINT_END_HOUR * 60 + MAINT_END_MINUTE;
+            let diff = endMinutes - currentMinutes;
+            if (diff < 0) diff += 24 * 60;
+            const h = Math.floor(diff / 60);
+            const m = diff % 60;
+            const s = 59 - now.getSeconds();
+            timerEl.textContent = '⏱️ متبقي: ' + h + 'س : ' + m + 'د : ' + s + 'ث';
+        }, 1000);
+    }
+
+    function checkMaintenance() { if (checkMaintenanceTime()) showMaintenance(); }
+
+    const FIXED_START = new Date(2026, 8, 27, 0, 0, 0).getTime();
+    const EXPIRY_DAYS = 7;
+    const MAX_KNOWN_TIME = new Date(2027, 0, 1).getTime();
+    const expiryTime = FIXED_START + (EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+    const cdDays = document.getElementById('cdDays'), cdHours = document.getElementById('cdHours');
+    const cdMins = document.getElementById('cdMins'), cdSecs = document.getElementById('cdSecs');
+    const countdownBox = document.getElementById('countdownBox');
+    const expiredOverlay = document.getElementById('expiredOverlay');
+
+    let countdownInterval = null;
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function initExpiry() {
+        updateCountdown();
+        if (countdownInterval) clearInterval(countdownInterval);
+        countdownInterval = setInterval(updateCountdown, 1000);
+    }
+
+    function updateCountdown() {
+        const realNow = Date.now();
+        const safeNow = Math.min(realNow, MAX_KNOWN_TIME);
+        const diff = expiryTime - safeNow;
+
+        if (diff <= 0) {
+            cdDays.textContent = '00'; cdHours.textContent = '00';
+            cdMins.textContent = '00'; cdSecs.textContent = '00';
+            countdownBox.classList.add('expired');
+            expiredOverlay.classList.add('show');
+            if (encryptBtn) encryptBtn.disabled = true;
+            if (fileInput) fileInput.disabled = true;
+            if (countdownInterval) clearInterval(countdownInterval);
+            return;
+        }
+
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / (1000 * 60)) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+
+        cdDays.textContent = pad(d);
+        cdHours.textContent = pad(h);
+        cdMins.textContent = pad(m);
+        cdSecs.textContent = pad(s);
+    }
+
+    let pyodide;
+    const fileInput = document.getElementById('fileInput');
+    const encryptBtn = document.getElementById('encryptBtn');
+    const encryptMethod = document.getElementById('encryptMethod');
+    const logArea = document.getElementById('logArea');
+    const btnText = document.getElementById('btnText');
+    const resultBox = document.getElementById('resultBox');
+    const resultText = document.getElementById('resultText');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    let pyodideLoaded = false;
+    let currentOriginalName = 'script';
+    let currentExtension = '.py';
+
+    async function initPyodide() {
+        log("جاري تحميل محرك Python (Pyodide)...");
+        try {
+            pyodide = await loadPyodide();
+            log("جاري تحميل مكتبة pycryptodome...");
+            try {
+                await pyodide.loadPackage(['pycryptodome']);
+                log("✅ الأداة جاهزة.");
+            } catch (pkgErr) {
+                log("⚠️ تعذّر تحميل pycryptodome — RSA لن يعمل.", true);
+            }
+            pyodideLoaded = true;
+            if (fileInput.files.length > 0) encryptBtn.disabled = false;
+        } catch (e) {
+            log("فشل تحميل المحرك: " + e.message, true);
+        }
+    }
+
+    function log(msg, isError = false) {
+        const p = document.createElement('p');
+        p.innerText = "> " + msg;
+        if (isError) p.classList.add('error');
+        logArea.appendChild(p);
+        logArea.scrollTop = logArea.scrollHeight;
+    }
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files.length > 0) {
+            const name = fileInput.files[0].name;
+            currentOriginalName = name.replace(/\.[^.]+$/, '');
+            currentExtension = name.toLowerCase().endsWith('.lua') ? '.lua' : '.py';
+            log(`تم اختيار الملف: ${name}`);
+            if (pyodideLoaded) encryptBtn.disabled = false;
+        } else {
+            encryptBtn.disabled = true;
+        }
+    });
+
+    const pythonCode = `
+import marshal, zlib, base64, sys
+
+def rsa_encrypt(data_bytes):
+    try:
+        from Crypto.PublicKey import RSA
+        from Crypto.Cipher import PKCS1_OAEP
+    except ImportError:
+        raise Exception("RSA requires pycryptodome")
+    key = RSA.generate(2048)
+    public_key = key.publickey()
+    cipher = PKCS1_OAEP.new(public_key)
+    max_chunk = 190
+    encrypted_parts = []
+    for i in range(0, len(data_bytes), max_chunk):
+        encrypted_parts.append(cipher.encrypt(data_bytes[i:i+max_chunk]))
+    encrypted_data = b''.join(encrypted_parts)
+    private_key_pem = key.export_key()
+    return base64.b64encode(private_key_pem) + b'||KEYSEP||' + base64.b64encode(encrypted_data)
+
+def ninja_encrypt(data_bytes):
+    ninja_key = b'N1nj4_0bfusc4t0r_K3y_2026!'
+    xored = bytes([data_bytes[i] ^ ninja_key[i % len(ninja_key)] for i in range(len(data_bytes))])
+    compressed = zlib.compress(xored, 9)
+    reversed_bytes = compressed[::-1]
+    encoded = base64.b64encode(reversed_bytes)
+    wrapped = marshal.dumps(encoded)
+    return base64.b64encode(wrapped)
+
+def encrypt_data(data, method):
+    if method == 'marshal':
+        return marshal.dumps(compile(data, '<string>', 'exec'))
+    elif method == 'base64':
+        return base64.b64encode(data.encode('utf-8'))
+    elif method == 'base32':
+        return base64.b32encode(data.encode('utf-8'))
+    elif method == 'zlib_base64':
+        return base64.b64encode(zlib.compress(data.encode('utf-8')))
+    elif method == 'zlib_base32':
+        return base64.b32encode(zlib.compress(data.encode('utf-8')))
+    elif method == 'zlib_base16':
+        return base64.b16encode(zlib.compress(data.encode('utf-8')))
+    elif method == 'marshal_zlib':
+        return zlib.compress(marshal.dumps(compile(data, '<string>', 'exec')))
+    elif method == 'marshal_base64':
+        return base64.b64encode(marshal.dumps(compile(data, '<string>', 'exec')))
+    elif method == 'marshal_zlib_base64':
+        return base64.b64encode(zlib.compress(marshal.dumps(compile(data, '<string>', 'exec'))))
+    elif method == 'rsa':
+        return rsa_encrypt(data.encode('utf-8'))
+    elif method == 'ninja':
+        return ninja_encrypt(data.encode('utf-8'))
+    else:
+        return data.encode('utf-8')
+
+def generate_runnable_file(encrypted_data, method):
+    data_repr = repr(encrypted_data)
+    py_version = str(sys.version_info.major) + "." + str(sys.version_info.minor)
+    header = "#Developer Dev\\n#Encrypt Type: " + method + "\\n#Generated for Python " + py_version + "\\n"
+
+    if method == 'marshal':
+        loader = "import marshal\\ncode = " + data_repr + "\\nexec(marshal.loads(code))\\n"
+    elif method == 'base64':
+        loader = "import base64\\ncode = " + data_repr + "\\nexec(base64.b64decode(code).decode('utf-8'))\\n"
+    elif method == 'base32':
+        loader = "import base64\\ncode = " + data_repr + "\\nexec(base64.b32decode(code).decode('utf-8'))\\n"
+    elif method == 'zlib_base64':
+        loader = "import base64, zlib\\ncode = " + data_repr + "\\nexec(zlib.decompress(base64.b64decode(code)).decode('utf-8'))\\n"
+    elif method == 'zlib_base32':
+        loader = "import base64, zlib\\ncode = " + data_repr + "\\nexec(zlib.decompress(base64.b32decode(code)).decode('utf-8'))\\n"
+    elif method == 'zlib_base16':
+        loader = "import base64, zlib\\ncode = " + data_repr + "\\nexec(zlib.decompress(base64.b16decode(code)).decode('utf-8'))\\n"
+    elif method == 'marshal_zlib':
+        loader = "import zlib, marshal\\ncode = " + data_repr + "\\nexec(marshal.loads(zlib.decompress(code)))\\n"
+    elif method == 'marshal_base64':
+        loader = "import base64, marshal\\ncode = " + data_repr + "\\nexec(marshal.loads(base64.b64decode(code)))\\n"
+    elif method == 'marshal_zlib_base64':
+        loader = "import base64, zlib, marshal\\ncode = " + data_repr + "\\nexec(marshal.loads(zlib.decompress(base64.b64decode(code))))\\n"
+    elif method == 'rsa':
+        loader = (
+            "import base64\\n"
+            "try:\\n"
+            "    from Crypto.PublicKey import RSA\\n"
+            "    from Crypto.Cipher import PKCS1_OAEP\\n"
+            "except ImportError:\\n"
+            "    print('RSA requires pycryptodome')\\n"
+            "    raise SystemExit(1)\\n"
+            "code = " + data_repr + "\\n"
+            "key_b64, data_b64 = code.split(b'||KEYSEP||')\\n"
+            "private_key = RSA.import_key(base64.b64decode(key_b64))\\n"
+            "cipher = PKCS1_OAEP.new(private_key)\\n"
+            "encrypted_data = base64.b64decode(data_b64)\\n"
+            "decrypted = b''\\n"
+            "for i in range(0, len(encrypted_data), 256):\\n"
+            "    decrypted += cipher.decrypt(encrypted_data[i:i+256])\\n"
+            "exec(decrypted.decode('utf-8'))\\n"
+        )
+    elif method == 'ninja':
+        loader = (
+            "import base64, zlib, marshal\\n"
+            "code = " + data_repr + "\\n"
+            "layer1 = base64.b64decode(code)\\n"
+            "layer2 = marshal.loads(layer1)\\n"
+            "layer3 = base64.b64decode(layer2)\\n"
+            "layer4 = layer3[::-1]\\n"
+            "layer5 = zlib.decompress(layer4)\\n"
+            "ninja_key = b'N1nj4_0bfusc4t0r_K3y_2026!'\\n"
+            "final = bytes([layer5[i] ^ ninja_key[i % len(ninja_key)] for i in range(len(layer5))])\\n"
+            "exec(final.decode('utf-8'))\\n"
+        )
+    else:
+        loader = "code = " + data_repr + "\\nexec(code)\\n"
+    return header + loader
+
+input_code = js_input_code
+method = js_method
+encrypted = encrypt_data(input_code, method)
+runnable_code = generate_runnable_file(encrypted, method)
+runnable_code
+    `;
+
+    // ═══════════════════════════════════════════════════
+    // 🎮 Lua Script — متوافق مع GG Mod و Roblox
+    // ═══════════════════════════════════════════════════
+    function luaScriptEncrypt(content) {
+        const bytes = new TextEncoder().encode(content);
+        const key = [0x4C, 0x75, 0x61, 0x52, 0x32, 0x30, 0x32, 0x36];
+        
+        const encrypted = new Uint8Array(bytes.length);
+        for (let i = 0; i < bytes.length; i++) {
+            encrypted[i] = bytes[i] ^ key[i % key.length];
+        }
+        
+        const nums = Array.from(encrypted);
+        
+        let formatted = '';
+        for (let i = 0; i < nums.length; i += 40) {
+            formatted += '    ' + nums.slice(i, i + 40).join(',') + ',\n';
+        }
+        formatted = formatted.replace(/,\s*$/, '');
+        
+        const luaCode = 
+`-- Dev Encryption | Lua Script
+-- Compatible: GG Mod, Roblox, All Executors
+local a = {
+${formatted}
+}
+local b = ""
+for i = 1, #a do
+    b = b .. string.char(a[i])
+end
+local c = {76, 117, 97, 82, 50, 48, 50, 54}
+local d = ""
+for i = 1, #b do
+    local e = string.byte(b, i)
+    local f = c[((i - 1) % #c) + 1]
+    d = d .. string.char(e ~ f)
+end
+loadstring(d)()`;
+        
+        return luaCode;
+    }
+
+    encryptBtn.addEventListener('click', async () => {
+        const file = fileInput.files[0];
+        if (!file) { log("الرجاء اختيار ملف أولاً.", true); return; }
+        
+        const method = encryptMethod.value;
+        encryptBtn.disabled = true;
+        btnText.innerText = "جاري التشفير...";
+        logArea.innerHTML = '';
+        resultBox.style.display = 'none';
+        log(`بدء التشفير باستخدام: ${method}`);
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content = e.target.result;
+            try {
+                let result;
+                
+                if (method === 'lua_script') {
+                    result = luaScriptEncrypt(content);
+                } else {
+                    if (!pyodide) {
+                        log("المحرك لم يتم تحميله بعد.", true);
+                        encryptBtn.disabled = false;
+                        btnText.innerText = "بدء التشفير";
+                        return;
+                    }
+                    pyodide.globals.set("js_input_code", content);
+                    pyodide.globals.set("js_method", method);
+                    result = await pyodide.runPythonAsync(pythonCode);
+                }
+                
+                log("✅ تم التشفير بنجاح!");
+                if (method === 'rsa') log("⚠️ pip install pycryptodome", false);
+                if (method.startsWith('marshal')) log("⚠️ نفس إصدار Python فقط.", false);
+                
+                resultText.value = result;
+                resultBox.style.display = 'block';
+                resultBox.scrollIntoView({ behavior: 'smooth' });
+            } catch (err) {
+                log("حدث خطأ: " + err.message, true);
+            } finally {
+                encryptBtn.disabled = false;
+                btnText.innerText = "بدء التشفير";
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // ═══════════════════════════════════════════════════
+    // 💾 زر حفظ الملف — 3 طرق
+    // ═══════════════════════════════════════════════════
+    downloadBtn.addEventListener('click', async () => {
+        const content = resultText.value;
+        if (!content || content.length === 0) { log("لا يوجد ملف للحفظ.", true); return; }
+        
+        const ext = currentExtension || '.py';
+        const filename = currentOriginalName + '_encrypted' + ext;
+        
+        log("💾 جاري حفظ الملف...");
+        
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{ description: 'Text Files', accept: { 'text/plain': ['.py', '.lua', '.txt'] } }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(content);
+                await writable.close();
+                log("✅ تم الحفظ بنجاح!");
+                log("📁 الملف: " + filename);
+                downloadBtn.innerText = "✅ تم الحفظ!";
+                setTimeout(() => { downloadBtn.innerText = "💾 حفظ الملف"; }, 3000);
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') { log("❌ تم إلغاء الحفظ."); return; }
+                log("⚠️ الطريقة 1 فشلت، جرب الطريقة 2...");
+            }
+        }
+        
+        try {
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+            
+            log("📥 تم بدء التنزيل...");
+            log("📁 ابحث في مجلد Downloads");
+            log("ℹ️ إذا لم يظهر: استخدم زر (نسخ)");
+            
+            downloadBtn.innerText = "✅ تم البدء!";
+            setTimeout(() => { downloadBtn.innerText = "💾 حفظ الملف"; }, 3000);
+            
+            setTimeout(() => {
+                navigator.clipboard.writeText(content).catch(() => {});
+            }, 2000);
+        } catch (err) {
+            log("❌ فشل الحفظ: " + err.message, true);
+        }
+    });
+
+    copyBtn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(resultText.value);
+            copyBtn.innerText = "✅ تم النسخ!";
+            setTimeout(() => { copyBtn.innerText = '📋 نسخ الكود'; }, 2000);
+        } catch (err) {
+            resultText.select();
+            resultText.setSelectionRange(0, 999999);
+            document.execCommand('copy');
+            copyBtn.innerText = "✅ تم النسخ!";
+            setTimeout(() => { copyBtn.innerText = '📋 نسخ الكود'; }, 2000);
+        }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        checkMaintenance();
+        setInterval(checkMaintenance, 60000);
+    });
+</script>
+</body>
+</html>
